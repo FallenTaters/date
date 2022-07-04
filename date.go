@@ -10,36 +10,52 @@ import (
 // ErrScan is returned when date.Date.Scan() fails
 var ErrScan = errors.New(`scan failed`)
 
-const Layout = `2006-01-02`
+// Format is the format used for all conversions
+const Format = `2006-01-02`
 
 /*
 Date represents a timezone-agnostic date.
 
-Two Dates can be compared and will be equal if the represented dates are equal.
+Two Dates can be compared using == and will be equal if the represented dates are equal.
 
-Date implements encoding.TextMarshaler and encoding.TestUnmarshaler, making it compatible with
-encoding/json, encoding/xml, etc.
+Date implements encoding.TextMarshaler and encoding.TextUnmarshaler, making it compatible with
+encoding/* packages.
 
-It only supports the ISO8601 date format `2006-01-02`
+Date implements sql.Scaner and driver.Valuer, making it compatible with database/sql.
+
+It only supports the ISO8601 date format `2006-01-02`, exposed as date.Format
 */
-type Date time.Time
+type Date struct {
+	t time.Time
+}
 
+// New makes a new date with the specified year, month and day.
+// The values can be out of range and will be handled by time.Date().
 func New(year int, month time.Month, day int) Date {
 	return From(time.Date(year, month, day, 0, 0, 0, 0, time.UTC))
 }
 
+// From removes the time component of t and returns a Date.
 func From(t time.Time) Date {
-	return Date(time.Date(t.Year(), t.Month(), t.Day(), 0, 0, 0, 0, time.UTC))
+	return Date{time.Date(t.Year(), t.Month(), t.Day(), 0, 0, 0, 0, time.UTC)}
 }
 
+// Time casts d to a time.Time.
 func (d Date) Time() time.Time {
-	return time.Time(d)
+	return d.t
 }
 
+// String implements fmt.Stringer.
 func (d Date) String() string {
-	return d.Time().Format(Layout)
+	return d.t.Format(Format)
 }
 
+// GoString implements fmt.GoStringer.
+func (d Date) GoString() string {
+	return fmt.Sprintf(`date.New(%d, %d, %d)`, d.Time().Year(), d.Time().Month(), d.Time().Day())
+}
+
+// Scan implements database/sql.Scanner.
 func (d *Date) Scan(src any) error {
 	var err error
 	switch v := src.(type) {
@@ -54,25 +70,28 @@ func (d *Date) Scan(src any) error {
 	}
 
 	if err != nil {
-		return fmt.Errorf(`%w: unable to unmarshal %v into date.Date: %s`, ErrScan, src, err.Error())
+		return fmt.Errorf(`%w: cannot unmarshal %v into date.Date: %s`, ErrScan, src, err.Error())
 	}
 
 	return nil
 }
 
+// Value implements database/sql/driver.Valuer.
 func (d Date) Value() (driver.Value, error) {
-	return time.Time(d), nil
+	return d.t, nil
 }
 
+// UnmarshalText implements encoding.TextUnmarshaler
 func (d *Date) UnmarshalText(data []byte) error {
-	t, err := time.Parse(Layout, string(data))
+	t, err := time.Parse(Format, string(data)) // will always be UTC
 	if err == nil {
-		*d = Date(t)
+		*d = Date{t}
 	}
 
 	return err
 }
 
+// MarshalText implements encoding.TextMarshaler
 func (d Date) MarshalText() ([]byte, error) {
-	return []byte(d.Time().Format(`2006-01-02`)), nil
+	return []byte(d.String()), nil
 }
