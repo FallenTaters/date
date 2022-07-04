@@ -48,6 +48,10 @@ func (t Time[F]) String() string {
 	return time.Time(t).Format(t.format())
 }
 
+func (t Time[F]) GoString() string {
+	return fmt.Sprintf(`format.Time(%#v)`, time.Time(t))
+}
+
 func (t *Time[F]) Scan(src any) error {
 	var err error
 
