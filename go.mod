@@ -1,3 +1,3 @@
-module github.com/FallenTaters/date
+module github.com/FallenTaters/timefmt
 
 go 1.18
