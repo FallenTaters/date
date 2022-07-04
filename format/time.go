@@ -7,23 +7,8 @@ import (
 	"time"
 )
 
-// ErrScan is returned when format.Time.Scan() fails
+// ErrScan is returned when format.Time.Scan() or format.Date.Scan() fails
 var ErrScan = errors.New(`scan failed`)
-
-// ISO8601Date accepts a date in the format `2006-01-02`
-type ISO8601Date struct{}
-
-// TimeFormat implements format.TimeFormat
-func (ISO8601Date) TimeFormat() string {
-	return `2006-01-02`
-}
-
-// RFC3339 is a format.TimeFormat for RFC3339
-type RFC3339 struct{}
-
-func (RFC3339) TimeFormat() string {
-	return time.RFC3339
-}
 
 type TimeFormat interface {
 	TimeFormat() string
@@ -33,7 +18,7 @@ type Time[F TimeFormat] time.Time
 
 func (t Time[F]) format() string {
 	var f F
-	return (f).TimeFormat()
+	return f.TimeFormat()
 }
 
 func TimeFrom[T TimeFormat](t time.Time) Time[T] {
